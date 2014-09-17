@@ -1,0 +1,148 @@
+/*
+Requires these properties in gradle.properties:
+
+*SAMPLE*
+VERSION_NAME=0.1
+GROUP=com.staticbloc
+
+POM_NAME=Jobs
+POM_ARTIFACT_ID=jobs
+POM_PACKAGING=jar
+POM_DESCRIPTION=A task queue library for Android.
+POM_URL=https://github.com/eygraber/jobs
+POM_SCM_URL=https://github.com/eygraber/jobs
+POM_SCM_CONNECTION=scm:git@github.com:eygraber/jobs.git
+POM_SCM_DEV_CONNECTION=scm:git@github.com:eygraber/jobs.git
+POM_LICENCE_NAME=The Apache Software License, Version 2.0
+POM_LICENCE_URL=http://www.apache.org/licenses/LICENSE-2.0.txt
+POM_LICENCE_DIST=repo
+POM_DEVELOPER_ID=eygrbaer
+POM_DEVELOPER_NAME=Eliezer Graber
+*/
+
+import org.gradle.plugins.signing.Sign
+
+apply plugin: 'maven'
+apply plugin: 'signing'
+
+def isReleaseBuild() {
+    return VERSION_NAME.contains("SNAPSHOT") == false
+}
+
+def getReleaseRepositoryUrl() {
+    return "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+}
+
+def getSnapshotRepositoryUrl() {
+    return "https://oss.sonatype.org/content/repositories/snapshots/"
+}
+
+def listGpgKeys() {
+    exec {
+        executable "gpg"
+        args "--list-keys", ""
+    }
+}
+
+def credentials = [
+        userName: new String(System.console().readLine("\nEnter your Sonatype/Nexus username:")),
+        password: new String(System.console().readPassword("\nEnter your Sonatype/Nexus password:"))
+]
+
+afterEvaluate { project ->
+    uploadArchives {
+        repositories {
+            mavenDeployer {
+                if (isReleaseBuild()) {
+                    beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+                }
+
+                pom.groupId = GROUP
+                pom.artifactId = POM_ARTIFACT_ID
+                pom.version = VERSION_NAME
+
+                repositories {
+                    repository(url: getReleaseRepositoryUrl(), authentication: credentials)
+                    snapshotRepository(url: getSnapshotRepositoryUrl(), authentication: credentials)
+                }
+
+                pom.project {
+                    name POM_NAME
+                    version VERSION_NAME
+                    packaging POM_PACKAGING
+                    description POM_DESCRIPTION
+                    url POM_URL
+
+                    scm {
+                        url POM_SCM_URL
+                        connection POM_SCM_CONNECTION
+                        developerConnection POM_SCM_DEV_CONNECTION
+                    }
+
+                    licenses {
+                        license {
+                            name POM_LICENCE_NAME
+                            url POM_LICENCE_URL
+                            distribution POM_LICENCE_DIST
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id POM_DEVELOPER_ID
+                            name POM_DEVELOPER_NAME
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    signing {
+        required { isReleaseBuild() && gradle.taskGraph.hasTask("uploadArchives") }
+        sign configurations.archives
+    }
+
+    if(isReleaseBuild()) {
+        gradle.taskGraph.whenReady { taskGraph ->
+            if (taskGraph.allTasks.any { it instanceof Sign }) {
+                Console console = System.console()
+                if(console != null) {
+                    listGpgKeys()
+                    console.printf "\n\nWe have to sign some things in this build." +
+                            "\n\nPlease enter your signing details.\n\n"
+
+                    def id = console.readLine("PGP Key Id: ")
+                    def file = console.readLine("PGP Secret Key Ring File (<absolute_path>/secring.gpg): ")
+                    def password = console.readPassword("PGP Private Key Password: ")
+
+                    allprojects { ext."signing.keyId" = id }
+                    allprojects { ext."signing.secretKeyRingFile" = file }
+                    allprojects { ext."signing.password" = password }
+
+                    console.printf "\nThanks.\n\n"
+                }
+            }
+        }
+    }
+
+    task androidJavadocs(type: Javadoc) {
+        source = android.sourceSets.main.java.srcDirs
+        classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+    }
+
+    task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
+        classifier = 'javadoc'
+        from androidJavadocs.destinationDir
+    }
+
+    task androidSourcesJar(type: Jar) {
+        classifier = 'sources'
+        from android.sourceSets.main.java.sourceFiles
+    }
+
+    artifacts {
+        archives androidSourcesJar
+        archives androidJavadocsJar
+    }
+}
