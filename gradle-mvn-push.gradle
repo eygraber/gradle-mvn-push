@@ -44,11 +44,6 @@ def listGpgKeys() {
     }
 }
 
-def credentials = [
-        userName: new String(System.console().readLine("\nEnter your Sonatype/Nexus username:")),
-        password: new String(System.console().readPassword("\nEnter your Sonatype/Nexus password:"))
-]
-
 afterEvaluate { project ->
     uploadArchives {
         repositories {
@@ -60,6 +55,11 @@ afterEvaluate { project ->
                 pom.groupId = GROUP
                 pom.artifactId = POM_ARTIFACT_ID
                 pom.version = VERSION_NAME
+                
+                def credentials = [
+                    userName: new String(System.console().readLine("\nEnter your Sonatype/Nexus username:")),
+                    password: new String(System.console().readPassword("\nEnter your Sonatype/Nexus password:"))
+                ]
 
                 repositories {
                     repository(url: getReleaseRepositoryUrl(), authentication: credentials)
