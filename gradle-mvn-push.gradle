@@ -45,59 +45,6 @@ def listGpgKeys() {
 }
 
 afterEvaluate { project ->
-    uploadArchives {
-        repositories {
-            mavenDeployer {
-                if (isReleaseBuild()) {
-                    beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-                }
-
-                pom.groupId = GROUP
-                pom.artifactId = POM_ARTIFACT_ID
-                pom.version = VERSION_NAME
-                
-                def credentials = [
-                    userName: new String(System.console().readLine("\nEnter your Sonatype/Nexus username:")),
-                    password: new String(System.console().readPassword("\nEnter your Sonatype/Nexus password:"))
-                ]
-
-                repositories {
-                    repository(url: getReleaseRepositoryUrl(), authentication: credentials)
-                    snapshotRepository(url: getSnapshotRepositoryUrl(), authentication: credentials)
-                }
-
-                pom.project {
-                    name POM_NAME
-                    version VERSION_NAME
-                    packaging POM_PACKAGING
-                    description POM_DESCRIPTION
-                    url POM_URL
-
-                    scm {
-                        url POM_SCM_URL
-                        connection POM_SCM_CONNECTION
-                        developerConnection POM_SCM_DEV_CONNECTION
-                    }
-
-                    licenses {
-                        license {
-                            name POM_LICENCE_NAME
-                            url POM_LICENCE_URL
-                            distribution POM_LICENCE_DIST
-                        }
-                    }
-
-                    developers {
-                        developer {
-                            id POM_DEVELOPER_ID
-                            name POM_DEVELOPER_NAME
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     signing {
         required { isReleaseBuild() && gradle.taskGraph.hasTask("uploadArchives") }
         sign configurations.archives
@@ -105,22 +52,90 @@ afterEvaluate { project ->
 
     if(isReleaseBuild()) {
         gradle.taskGraph.whenReady { taskGraph ->
-            if (taskGraph.allTasks.any { it instanceof Sign }) {
+            ext {
+                nexusUsername = ""
+                nexusPassword = ""
+            }
+
+            if (taskGraph.hasTask(':uploadArchives')) {
                 Console console = System.console()
                 if(console != null) {
-                    listGpgKeys()
-                    console.printf "\n\nWe have to sign some things in this build." +
-                            "\n\nPlease enter your signing details.\n\n"
+                    nexusUsername = new String(console.readLine("\nEnter your Sonatype/Nexus username:"))
+                    nexusPassword = new String(console.readPassword("\nEnter your Sonatype/Nexus password:"))
 
-                    def id = console.readLine("PGP Key Id: ")
-                    def file = console.readLine("PGP Secret Key Ring File (<absolute_path>/secring.gpg): ")
-                    def password = console.readPassword("PGP Private Key Password: ")
+                    if(isReleaseBuild()) {
+                        listGpgKeys()
+                        console.printf "\n\nWe have to sign some things in this build." +
+                                "\n\nPlease enter your signing details.\n\n"
 
-                    allprojects { ext."signing.keyId" = id }
-                    allprojects { ext."signing.secretKeyRingFile" = file }
-                    allprojects { ext."signing.password" = password }
+                        def id = console.readLine("PGP Key Id: ")
+                        def file = console.readLine("PGP Secret Key Ring File (<absolute_path>/secring.gpg): ")
+                        def password = console.readPassword("PGP Private Key Password: ")
 
-                    console.printf "\nThanks.\n\n"
+                        allprojects { ext."signing.keyId" = id }
+                        allprojects { ext."signing.secretKeyRingFile" = file }
+                        allprojects { ext."signing.password" = password }
+
+                        console.printf "\nThanks.\n\n"
+                    }
+                }
+            }
+
+            uploadArchives {
+                repositories {
+                    mavenDeployer {
+                        if (isReleaseBuild()) {
+                            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+                        }
+
+                        pom.groupId = GROUP
+                        pom.artifactId = POM_ARTIFACT_ID
+                        pom.version = VERSION_NAME
+
+                        repositories {
+                            repository(url: getReleaseRepositoryUrl()) {
+                                authentication(
+                                        userName: nexusUsername,
+                                        password: nexusPassword
+                                )
+                            }
+                            snapshotRepository(url: getSnapshotRepositoryUrl()) {
+                                authentication(
+                                        userName: nexusUsername,
+                                        password: nexusPassword
+                                )
+                            }
+                        }
+
+                        pom.project {
+                            name POM_NAME
+                            version VERSION_NAME
+                            packaging POM_PACKAGING
+                            description POM_DESCRIPTION
+                            url POM_URL
+
+                            scm {
+                                url POM_SCM_URL
+                                connection POM_SCM_CONNECTION
+                                developerConnection POM_SCM_DEV_CONNECTION
+                            }
+
+                            licenses {
+                                license {
+                                    name POM_LICENCE_NAME
+                                    url POM_LICENCE_URL
+                                    distribution POM_LICENCE_DIST
+                                }
+                            }
+
+                            developers {
+                                developer {
+                                    id POM_DEVELOPER_ID
+                                    name POM_DEVELOPER_NAME
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
