@@ -45,6 +45,8 @@ def listGpgKeys() {
 }
 
 afterEvaluate { project ->
+    project.version = VERSION_NAME
+    project.group = GROUP
     signing {
         required { isReleaseBuild() && gradle.taskGraph.hasTask("uploadArchives") }
         sign configurations.archives
