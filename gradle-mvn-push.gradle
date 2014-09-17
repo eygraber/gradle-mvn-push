@@ -49,9 +49,8 @@ afterEvaluate { project ->
         required { isReleaseBuild() && gradle.taskGraph.hasTask("uploadArchives") }
         sign configurations.archives
     }
-
-    if(isReleaseBuild()) {
-        gradle.taskGraph.whenReady { taskGraph ->
+    
+    gradle.taskGraph.whenReady { taskGraph ->
             ext {
                 nexusUsername = ""
                 nexusPassword = ""
@@ -137,7 +136,6 @@ afterEvaluate { project ->
                 }
             }
         }
-    }
 
     task androidJavadocs(type: Javadoc) {
         source = android.sourceSets.main.java.srcDirs
