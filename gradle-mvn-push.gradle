@@ -1,4 +1,6 @@
 /*
+ONLY TESTED ON GRADLE 2.1
+
 Requires these properties in gradle.properties:
 
 *SAMPLE*
@@ -163,13 +165,13 @@ afterEvaluate { project ->
 
     task androidJavadocsJar(type: Jar) {
         classifier = 'javadoc'
-        basename = POM_ARTIFACT_ID
+        baseName = POM_ARTIFACT_ID
         from androidJavadocs.destinationDir
     }
 
     task androidSourcesJar(type: Jar) {
         classifier = 'sources'
-        basename = POM_ARTIFACT_ID
+        baseName = POM_ARTIFACT_ID
         from android.sourceSets.main.java.srcDirs
     }
 
