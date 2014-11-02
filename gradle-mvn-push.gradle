@@ -59,12 +59,12 @@ def listGpgKeys() {
 
 afterEvaluate { project ->
     signing {
-        required { isReleaseBuild() && gradle.taskGraph.hasTask(':uploadArchives') }
+        required { isReleaseBuild() && gradle.taskGraph.hasTask(":${project.name}:uploadArchives") }
         sign configurations.archives
     }
 
     gradle.taskGraph.whenReady { taskGraph ->
-        if (taskGraph.hasTask(':uploadArchives')) {
+        if (taskGraph.hasTask(":${project.name}:uploadArchives")) {
             Console console = System.console()
             if(console != null) {
                 listGpgKeys()
@@ -94,7 +94,7 @@ afterEvaluate { project ->
 
                     repositories {
                         Console console = System.console()
-                        if(console != null && taskGraph.hasTask(':uploadArchives')) {
+                        if(console != null && taskGraph.hasTask(":${project.name}:uploadArchives")) {
                             ext {
                                 nexusUsername = new String(console.readLine('\nEnter your Sonatype/Nexus username:'))
                                 nexusPassword = new String(console.readPassword('\nEnter your Sonatype/Nexus password:'))
