@@ -1,4 +1,4 @@
-gradle-mvn-push-android
+gradle-mvn-push
 ===============
 
-A gradle script for deploying Android projects to MavenCentral using Sonatype and Nexus
+A gradle script for deploying to MavenCentral using Sonatype and Nexus
