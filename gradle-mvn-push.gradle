@@ -1,12 +1,9 @@
 /*
 ONLY TESTED ON GRADLE 2.1
-
 Requires these properties in gradle.properties:
-
 *SAMPLE*
 VERSION_NAME=0.1
 GROUP=com.staticbloc
-
 POM_NAME=Jobs
 POM_ARTIFACT_ID=jobs
 POM_PACKAGING=aar
@@ -20,11 +17,9 @@ POM_LICENCE_URL=http://www.apache.org/licenses/LICENSE-2.0.txt
 POM_LICENCE_DIST=repo
 POM_DEVELOPER_ID=eygrbaer
 POM_DEVELOPER_NAME=Eliezer Graber
-
 To use SNAPSHOT dependencies include:
     maven { url 'https://oss.sonatype.org/content/repositories/snapshots/'}
 in your build.gradle's repositories
-
 This script is for those who don't want to store passwords in a property file / envvar.
 For those that do, check out:
     https://raw.githubusercontent.com/koush/mvn-repo/master/maven.gradle
@@ -146,39 +141,20 @@ afterEvaluate { project ->
             }
         }
     }
-
-    task apklib(type: Zip) {
-        appendix = extension = 'apklib'
-
-        from 'src/main/AndroidManifest.xml'
-        into('res') {
-            from 'src/main/res'
-        }
-        into('src') {
-            from 'src/main/java'
-        }
-    }
-
-    task androidJavadocs(type: Javadoc) {
-        source = android.sourceSets.main.java.srcDirs
-    }
-
-    task androidJavadocsJar(type: Jar) {
-        classifier = 'javadoc'
-        baseName = POM_ARTIFACT_ID
-        from androidJavadocs.destinationDir
-    }
-
-    task androidSourcesJar(type: Jar) {
+    
+    task sourcesJar(type: Jar, dependsOn: classes) {
         classifier = 'sources'
-        baseName = POM_ARTIFACT_ID
-        from android.sourceSets.main.java.srcDirs
+        from sourceSets.main.allSource
+    }
+
+    task javadocJar(type: Jar, dependsOn: javadoc) {
+        classifier = 'javadoc'
+        from javadoc.destinationDir
     }
 
     artifacts {
         archives packageReleaseJar
-        archives androidSourcesJar
-        archives androidJavadocsJar
+        archives sourcesJar
+        archives javadocJar
     }
 }
-
