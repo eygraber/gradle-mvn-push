@@ -68,8 +68,8 @@ afterEvaluate { project ->
             Console console = System.console()
             if(console != null) {
                 listGpgKeys()
-                console.printf '\n\nWe have to sign some things in this build.' +
-                        '\n\nPlease enter your signing details.\n\n'
+                console.printf "\n\nWe have to sign some things for ${project.name}." +
+                        "\n\nPlease enter your signing details.\n\n""
 
                 def id = console.readLine('PGP Key Id: ')
                 def file = console.readLine('PGP Secret Key Ring File (<absolute_path>/secring.gpg): ')
@@ -96,8 +96,8 @@ afterEvaluate { project ->
                         Console console = System.console()
                         if(console != null && taskGraph.hasTask(":${project.name}:uploadArchives")) {
                             ext {
-                                nexusUsername = new String(console.readLine('\nEnter your Sonatype/Nexus username:'))
-                                nexusPassword = new String(console.readPassword('\nEnter your Sonatype/Nexus password:'))
+                                nexusUsername = new String(console.readLine("\n(${project.name}) Enter your Sonatype/Nexus username:"))
+                                nexusPassword = new String(console.readPassword("\n(${project.name}) Enter your Sonatype/Nexus password:"))
                             }
                         }
                         else {
