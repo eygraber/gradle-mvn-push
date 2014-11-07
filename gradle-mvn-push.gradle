@@ -69,7 +69,7 @@ afterEvaluate { project ->
             if(console != null) {
                 listGpgKeys()
                 console.printf "\n\nWe have to sign some things for ${project.name}." +
-                        "\n\nPlease enter your signing details.\n\n""
+                        "\n\nPlease enter your signing details.\n\n"
 
                 def id = console.readLine('PGP Key Id: ')
                 def file = console.readLine('PGP Secret Key Ring File (<absolute_path>/secring.gpg): ')
