@@ -1,9 +1,12 @@
 /*
 ONLY TESTED ON GRADLE 2.1
+
 Requires these properties in gradle.properties:
+
 *SAMPLE*
 VERSION_NAME=0.1
 GROUP=com.staticbloc
+
 POM_NAME=Jobs
 POM_ARTIFACT_ID=jobs
 POM_PACKAGING=aar
@@ -17,9 +20,11 @@ POM_LICENCE_URL=http://www.apache.org/licenses/LICENSE-2.0.txt
 POM_LICENCE_DIST=repo
 POM_DEVELOPER_ID=eygrbaer
 POM_DEVELOPER_NAME=Eliezer Graber
+
 To use SNAPSHOT dependencies include:
     maven { url 'https://oss.sonatype.org/content/repositories/snapshots/'}
 in your build.gradle's repositories
+
 This script is for those who don't want to store passwords in a property file / envvar.
 For those that do, check out:
     https://raw.githubusercontent.com/koush/mvn-repo/master/maven.gradle
@@ -63,8 +68,8 @@ afterEvaluate { project ->
             Console console = System.console()
             if(console != null) {
                 listGpgKeys()
-                console.printf '\n\nWe have to sign some things in this build.' +
-                        '\n\nPlease enter your signing details.\n\n'
+                console.printf "\n\nWe have to sign some things for ${project.name}." +
+                        "\n\nPlease enter your signing details.\n\n""
 
                 def id = console.readLine('PGP Key Id: ')
                 def file = console.readLine('PGP Secret Key Ring File (<absolute_path>/secring.gpg): ')
@@ -91,8 +96,8 @@ afterEvaluate { project ->
                         Console console = System.console()
                         if(console != null && taskGraph.hasTask(":${project.name}:uploadArchives")) {
                             ext {
-                                nexusUsername = new String(console.readLine('\nEnter your Sonatype/Nexus username:'))
-                                nexusPassword = new String(console.readPassword('\nEnter your Sonatype/Nexus password:'))
+                                nexusUsername = new String(console.readLine("\n(${project.name}) Enter your Sonatype/Nexus username:"))
+                                nexusPassword = new String(console.readPassword("\n(${project.name}) Enter your Sonatype/Nexus password:"))
                             }
                         }
                         else {
