@@ -20,6 +20,11 @@ POM_LICENCE_URL=http://www.apache.org/licenses/LICENSE-2.0.txt
 POM_LICENCE_DIST=repo
 POM_DEVELOPER_ID=eygrbaer
 POM_DEVELOPER_NAME=Eliezer Graber
+PGP_KEY_ID=<pgp key ID>
+PGP_SECRET_KEY_RING=<absolute path to pgp secring.gpg file>
+PGP_PRIVATE_KEY_PASSWORD=<password for pgp private key>
+NEXUS_USERNAME=<username for nexus/sonatype account>
+NEXUS_PASSWORD=<password for nexus/sonatype account>
 
 To use SNAPSHOT dependencies include:
     maven { url 'https://oss.sonatype.org/content/repositories/snapshots/'}
