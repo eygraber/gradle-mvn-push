@@ -39,146 +39,183 @@ apply plugin: 'maven'
 apply plugin: 'signing'
 
 def isReleaseBuild() {
-    return VERSION_NAME.contains('SNAPSHOT') == false
+  return VERSION_NAME.contains('SNAPSHOT') == false
 }
 
 def getReleaseRepositoryUrl() {
-    return 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+  return 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
 }
 
 def getSnapshotRepositoryUrl() {
-    return 'https://oss.sonatype.org/content/repositories/snapshots/'
+  return 'https://oss.sonatype.org/content/repositories/snapshots/'
 }
 
 def listGpgKeys() {
-    exec {
-        executable 'gpg'
-        args '--list-keys'
-    }
+  exec {
+    executable 'gpg'
+    args '--list-keys'
+  }
 }
 
 afterEvaluate { project ->
-    signing {
-        required { isReleaseBuild() && gradle.taskGraph.hasTask(":${project.name}:uploadArchives") }
-        sign configurations.archives
+  signing {
+    required { isReleaseBuild() && gradle.taskGraph.hasTask(":${project.name}:uploadArchives") }
+    sign configurations.archives
+  }
+
+  gradle.taskGraph.whenReady { taskGraph ->
+    if (taskGraph.hasTask(":${project.name}:uploadArchives")) {
+      Console console = System.console()
+      if(console != null) {
+        listGpgKeys()
+        console.printf "\n\nWe have to sign some things for ${project.name}." +
+                "\n\nPlease enter your signing details.\n\n"
+
+        def id
+        if(project.hasProperty('PGP_KEY_ID')) {
+          id = project.getProperty('PGP_KEY_ID')
+          console.println("Using ${id} for PGP Key ID")
+        }
+        else {
+          id = console.readLine('PGP Key ID: ')
+        }
+
+        def file
+        if(project.hasProperty('PGP_SECRET_KEY_RING')) {
+          file = project.getProperty('PGP_SECRET_KEY_RING')
+          console.println("Using ${file} for PGP Secrect Key Ring File")
+        }
+        else {
+          file = console.readLine('PGP Secret Key Ring File (<absolute_path>/secring.gpg): ')
+        }
+
+        def password
+        if(project.hasProperty('PGP_PRIVATE_KEY_PASSWORD')) {
+          password = project.getProperty('PGP_PRIVATE_KEY_PASSWORD')
+          console.println('Using property value for PGP_PRIVATE_KEY_PASSWORD')
+        }
+        else {
+          password = console.readPassword('PGP Private Key Password: ')
+        }
+
+        allprojects { ext.'signing.keyId' = id }
+        allprojects { ext.'signing.secretKeyRingFile' = file }
+        allprojects { ext.'signing.password' = password }
+
+        console.printf '\nThanks.\n\n'
+      }
     }
 
-    gradle.taskGraph.whenReady { taskGraph ->
-        if (taskGraph.hasTask(":${project.name}:uploadArchives")) {
+    uploadArchives {
+      repositories {
+        mavenDeployer {
+          beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+          pom.groupId = GROUP
+          pom.artifactId = POM_ARTIFACT_ID
+          pom.version = VERSION_NAME
+
+          def nexusUsernameProperty = ''
+          if(project.hasProperty('NEXUS_USERNAME')) {
+            nexusUsernameProperty = project.getProperty('NEXUS_USERNAME')
+            System.console().println("Using ${nexusUsernameProperty} for Nexus/Sonatype username")
+          }
+
+          def nexusPasswordProperty = ''
+          if(project.hasProperty('NEXUS_PASSWORD')) {
+            nexusPasswordProperty = project.getProperty('NEXUS_PASSWORD')
+            System.console().println("Using property value for Nexus/Sonatype password")
+          }
+
+          repositories {
             Console console = System.console()
-            if(console != null) {
-                listGpgKeys()
-                console.printf "\n\nWe have to sign some things for ${project.name}." +
-                        "\n\nPlease enter your signing details.\n\n"
-
-                def id = console.readLine('PGP Key Id: ')
-                def file = console.readLine('PGP Secret Key Ring File (<absolute_path>/secring.gpg): ')
-                def password = console.readPassword('PGP Private Key Password: ')
-
-                allprojects { ext.'signing.keyId' = id }
-                allprojects { ext.'signing.secretKeyRingFile' = file }
-                allprojects { ext.'signing.password' = password }
-
-                console.printf '\nThanks.\n\n'
+            if(console != null && taskGraph.hasTask(":${project.name}:uploadArchives")) {
+              ext {
+                nexusUsername = nexusUsernameProperty == '' ? new String(console.readLine("\n(${project.name}) Enter your Sonatype/Nexus username:")) : nexusUsernameProperty
+                nexusPassword = nexusPasswordProperty == '' ? new String(console.readPassword("\n(${project.name}) Enter your Sonatype/Nexus password:")) : nexusPasswordProperty
+              }
             }
-        }
-
-        uploadArchives {
-            repositories {
-                mavenDeployer {
-                    beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-                    pom.groupId = GROUP
-                    pom.artifactId = POM_ARTIFACT_ID
-                    pom.version = VERSION_NAME
-
-                    repositories {
-                        Console console = System.console()
-                        if(console != null && taskGraph.hasTask(":${project.name}:uploadArchives")) {
-                            ext {
-                                nexusUsername = new String(console.readLine("\n(${project.name}) Enter your Sonatype/Nexus username:"))
-                                nexusPassword = new String(console.readPassword("\n(${project.name}) Enter your Sonatype/Nexus password:"))
-                            }
-                        }
-                        else {
-                            ext {
-                                nexusUsername = ''
-                                nexusPassword = ''
-                            }
-                        }
-
-                        repository(url: getReleaseRepositoryUrl()) {
-                            authentication(userName: nexusUsername, password: nexusPassword)
-                        }
-                        snapshotRepository(url: getSnapshotRepositoryUrl()) {
-                            authentication(userName: nexusUsername, password: nexusPassword)
-                        }
-                    }
-
-                    pom.project {
-                        name POM_NAME
-                        packaging POM_PACKAGING
-                        description POM_DESCRIPTION
-                        url POM_URL
-
-                        scm {
-                            url POM_SCM_URL
-                            connection POM_SCM_CONNECTION
-                            developerConnection POM_SCM_DEV_CONNECTION
-                        }
-
-                        licenses {
-                            license {
-                                name POM_LICENCE_NAME
-                                url POM_LICENCE_URL
-                                distribution POM_LICENCE_DIST
-                            }
-                        }
-
-                        developers {
-                            developer {
-                                id POM_DEVELOPER_ID
-                                name POM_DEVELOPER_NAME
-                            }
-                        }
-                    }
-                }
+            else {
+              ext {
+                nexusUsername = ''
+                nexusPassword = ''
+              }
             }
+
+            console.println("Using ${nexusUsername} for the Nexus/Sonatype username")
+            console.println(nexusPassword)
+
+            repository(url: getReleaseRepositoryUrl()) {
+              authentication(userName: nexusUsername, password: nexusPassword)
+            }
+            snapshotRepository(url: getSnapshotRepositoryUrl()) {
+              authentication(userName: nexusUsername, password: nexusPassword)
+            }
+          }
+
+          pom.project {
+            name POM_NAME
+            packaging POM_PACKAGING
+            description POM_DESCRIPTION
+            url POM_URL
+
+            scm {
+              url POM_SCM_URL
+              connection POM_SCM_CONNECTION
+              developerConnection POM_SCM_DEV_CONNECTION
+            }
+
+            licenses {
+              license {
+                name POM_LICENCE_NAME
+                url POM_LICENCE_URL
+                distribution POM_LICENCE_DIST
+              }
+            }
+
+            developers {
+              developer {
+                id POM_DEVELOPER_ID
+                name POM_DEVELOPER_NAME
+              }
+            }
+          }
         }
+      }
     }
+  }
 
-    task apklib(type: Zip) {
-        appendix = extension = 'apklib'
+  task apklib(type: Zip) {
+    appendix = extension = 'apklib'
 
-        from 'src/main/AndroidManifest.xml'
-        into('res') {
-            from 'src/main/res'
-        }
-        into('src') {
-            from 'src/main/java'
-        }
+    from 'src/main/AndroidManifest.xml'
+    into('res') {
+      from 'src/main/res'
     }
-
-    task androidJavadocs(type: Javadoc) {
-        source = android.sourceSets.main.java.srcDirs
+    into('src') {
+      from 'src/main/java'
     }
+  }
 
-    task androidJavadocsJar(type: Jar) {
-        classifier = 'javadoc'
-        baseName = POM_ARTIFACT_ID
-        from androidJavadocs.destinationDir
-    }
+  task androidJavadocs(type: Javadoc) {
+    source = android.sourceSets.main.java.srcDirs
+  }
 
-    task androidSourcesJar(type: Jar) {
-        classifier = 'sources'
-        baseName = POM_ARTIFACT_ID
-        from android.sourceSets.main.java.srcDirs
-    }
+  task androidJavadocsJar(type: Jar) {
+    classifier = 'javadoc'
+    baseName = POM_ARTIFACT_ID
+    from androidJavadocs.destinationDir
+  }
 
-    artifacts {
-        archives packageReleaseJar
-        archives androidSourcesJar
-        archives androidJavadocsJar
-    }
+  task androidSourcesJar(type: Jar) {
+    classifier = 'sources'
+    baseName = POM_ARTIFACT_ID
+    from android.sourceSets.main.java.srcDirs
+  }
+
+  artifacts {
+    archives packageReleaseJar
+    archives androidSourcesJar
+    archives androidJavadocsJar
+  }
 }
-
