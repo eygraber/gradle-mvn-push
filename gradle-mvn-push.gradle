@@ -71,7 +71,7 @@ afterEvaluate { project ->
                 console.printf "\n\nWe have to sign some things for ${project.name}." +
                         "\n\nPlease enter your signing details.\n\n"
 
-                def id = console.readLine('PGP Key Id: ')
+                def id = System.hasProperty('PGP_KEY_ID') ? System.getProperty('PGP_KEY_ID') : console.readLine('PGP Key Id: ')
                 def file = console.readLine('PGP Secret Key Ring File (<absolute_path>/secring.gpg): ')
                 def password = console.readPassword('PGP Private Key Password: ')
 
