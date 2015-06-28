@@ -194,6 +194,6 @@ afterEvaluate { project ->
   }
 
   artifacts {
-    archives packageReleaseJar
+    archives jar
   }
 }
