@@ -193,37 +193,7 @@ afterEvaluate { project ->
     }
   }
 
-  task apklib(type: Zip) {
-    appendix = extension = 'apklib'
-
-    from 'src/main/AndroidManifest.xml'
-    into('res') {
-      from 'src/main/res'
-    }
-    into('src') {
-      from 'src/main/java'
-    }
-  }
-
-  task androidJavadocs(type: Javadoc) {
-    source = android.sourceSets.main.java.srcDirs
-  }
-
-  task androidJavadocsJar(type: Jar) {
-    classifier = 'javadoc'
-    baseName = POM_ARTIFACT_ID
-    from androidJavadocs.destinationDir
-  }
-
-  task androidSourcesJar(type: Jar) {
-    classifier = 'sources'
-    baseName = POM_ARTIFACT_ID
-    from android.sourceSets.main.java.srcDirs
-  }
-
   artifacts {
     archives packageReleaseJar
-    archives androidSourcesJar
-    archives androidJavadocsJar
   }
 }
