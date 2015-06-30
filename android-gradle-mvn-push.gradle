@@ -112,7 +112,7 @@ afterEvaluate { project ->
                     console.println("(${project.name}) Using property value for Nexus/Sonatype password")
                 }
                 else {
-                    nexusPasswordProperty = console.readPassword("\n(${project.name}) Enter your Sonatype/Nexus password: ")
+                    nexusPasswordProperty = new String(console.readPassword("\n(${project.name}) Enter your Sonatype/Nexus password: "))
                 }
 
                 project.ext.'signing.keyId' = id
@@ -128,29 +128,18 @@ afterEvaluate { project ->
         uploadArchives {
             repositories {
                 mavenDeployer {
-                    beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+                    beforeDeployment {MavenDeployment deployment -> signing.signPom(deployment)}
 
                     pom.groupId = GROUP
                     pom.artifactId = POM_ARTIFACT_ID
                     pom.version = VERSION_NAME
 
-                    repositories {
-                        Console console = System.console()
-                        if(console != null && taskGraph.hasTask(":${project.name}:uploadArchives")) {
-                            ext {
-                                nexusUsername = nexusUsernameProperty
-                                nexusPassword = nexusPasswordProperty
-                            }
-                        }
-                        else {
-                            ext {
-                                nexusUsername = ''
-                                nexusPassword = ''
-                            }
-                        }
+                    project.ext.nexusUsername = project.hasProperty('nexusUsernameProperty') ? project.ext.nexusUsernameProperty : ''
+                    project.ext.nexusPassword = project.hasProperty('nexusPasswordProperty') ? project.ext.nexusPasswordProperty : ''
 
+                    repositories {
                         repository(url: getReleaseRepositoryUrl()) {
-                            authentication(userName: nexusUsername, password: nexusPassword)
+                            authentication(userName: project.ext.nexusUsername, password: project.ext.nexusPassword)
                         }
                         snapshotRepository(url: getSnapshotRepositoryUrl()) {
                             authentication(userName: nexusUsername, password: nexusPassword)
