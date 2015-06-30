@@ -1,12 +1,9 @@
 /*
 ONLY TESTED ON GRADLE 2.1
-
 Requires these properties in gradle.properties:
-
 *SAMPLE*
 VERSION_NAME=0.1
 GROUP=com.staticbloc
-
 POM_NAME=Jobs
 POM_ARTIFACT_ID=jobs
 POM_PACKAGING=aar
@@ -20,178 +17,175 @@ POM_LICENCE_URL=http://www.apache.org/licenses/LICENSE-2.0.txt
 POM_LICENCE_DIST=repo
 POM_DEVELOPER_ID=eygrbaer
 POM_DEVELOPER_NAME=Eliezer Graber
-
 The following properties are optional:
-
 PGP_KEY_ID=<pgp key ID>
 PGP_SECRET_KEY_RING=<absolute path to pgp secring.gpg file>
 PGP_PRIVATE_KEY_PASSWORD=<password for pgp private key>
 NEXUS_USERNAME=<username for nexus/sonatype account>
 NEXUS_PASSWORD=<password for nexus/sonatype account>
-
 To use SNAPSHOT dependencies include:
     maven { url 'https://oss.sonatype.org/content/repositories/snapshots/'}
 in your build.gradle's repositories
-
 This script is for those who don't want to store passwords in a property file / envvar.
 For those that do, check out:
     https://raw.githubusercontent.com/koush/mvn-repo/master/maven.gradle
     https://raw.githubusercontent.com/amlcurran/ShowcaseView/master/library/gradle-mvn-push.gradle
-    
 This script should be included at the bottom of build.gradle like so:
     apply from: 'https://raw.githubusercontent.com/eygraber/gradle-mvn-push/master/gradle-mvn-push.gradle'
-    
 */
 
 apply plugin: 'maven'
 apply plugin: 'signing'
 
 def isReleaseBuild() {
-  return VERSION_NAME.contains('SNAPSHOT') == false
+    return VERSION_NAME.contains('SNAPSHOT') == false
 }
 
 def getReleaseRepositoryUrl() {
-  return 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+    return 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
 }
 
 def getSnapshotRepositoryUrl() {
-  return 'https://oss.sonatype.org/content/repositories/snapshots/'
+    return 'https://oss.sonatype.org/content/repositories/snapshots/'
 }
 
 def listGpgKeys() {
-  exec {
-    executable 'gpg'
-    args '--list-keys'
-  }
+    exec {
+        executable 'gpg'
+        args '--list-keys'
+    }
 }
 
 afterEvaluate { project ->
-  signing {
-    required { isReleaseBuild() && gradle.taskGraph.hasTask(":${project.name}:uploadArchives") }
-    sign configurations.archives
-  }
-
-  gradle.taskGraph.whenReady { taskGraph ->
-    if (taskGraph.hasTask(":${project.name}:uploadArchives")) {
-      Console console = System.console()
-      if(console != null) {
-        listGpgKeys()
-        console.printf "\n\nWe have to sign some things for ${project.name}." +
-                "\n\nPlease enter your signing details.\n\n"
-
-        def id
-        if(project.hasProperty('PGP_KEY_ID')) {
-          id = project.getProperty('PGP_KEY_ID')
-          console.println("Using ${id} for PGP Key ID")
-        }
-        else {
-          id = console.readLine('PGP Key ID: ')
-        }
-
-        def file
-        if(project.hasProperty('PGP_SECRET_KEY_RING')) {
-          file = project.getProperty('PGP_SECRET_KEY_RING')
-          console.println("Using ${file} for PGP Secrect Key Ring File")
-        }
-        else {
-          file = console.readLine('PGP Secret Key Ring File (<absolute_path>/secring.gpg): ')
-        }
-
-        def password
-        if(project.hasProperty('PGP_PRIVATE_KEY_PASSWORD')) {
-          password = project.getProperty('PGP_PRIVATE_KEY_PASSWORD')
-          console.println('Using property value for PGP_PRIVATE_KEY_PASSWORD')
-        }
-        else {
-          password = console.readPassword('PGP Private Key Password: ')
-        }
-
-        allprojects { ext.'signing.keyId' = id }
-        allprojects { ext.'signing.secretKeyRingFile' = file }
-        allprojects { ext.'signing.password' = password }
-
-        console.printf '\nThanks.\n\n'
-      }
+    signing {
+        required { isReleaseBuild() && gradle.taskGraph.hasTask(":${project.name}:uploadArchives") }
+        sign configurations.archives
     }
 
-    uploadArchives {
-      repositories {
-        mavenDeployer {
-          beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-          pom.groupId = GROUP
-          pom.artifactId = POM_ARTIFACT_ID
-          pom.version = VERSION_NAME
-
-          def nexusUsernameProperty = ''
-          if(project.hasProperty('NEXUS_USERNAME')) {
-            nexusUsernameProperty = project.getProperty('NEXUS_USERNAME')
-            System.console().println("Using ${nexusUsernameProperty} for Nexus/Sonatype username")
-          }
-
-          def nexusPasswordProperty = ''
-          if(project.hasProperty('NEXUS_PASSWORD')) {
-            nexusPasswordProperty = project.getProperty('NEXUS_PASSWORD')
-            System.console().println("Using property value for Nexus/Sonatype password")
-          }
-
-          repositories {
+    gradle.taskGraph.whenReady { taskGraph ->
+        if (taskGraph.hasTask(":${project.name}:uploadArchives")) {
             Console console = System.console()
-            if(console != null && taskGraph.hasTask(":${project.name}:uploadArchives")) {
-              ext {
-                nexusUsername = nexusUsernameProperty == '' ? new String(console.readLine("\n(${project.name}) Enter your Sonatype/Nexus username:")) : nexusUsernameProperty
-                nexusPassword = nexusPasswordProperty == '' ? new String(console.readPassword("\n(${project.name}) Enter your Sonatype/Nexus password:")) : nexusPasswordProperty
-              }
-            }
-            else {
-              ext {
-                nexusUsername = ''
-                nexusPassword = ''
-              }
-            }
+            if(console != null) {
+                listGpgKeys()
 
-            console.println("Using ${nexusUsername} for the Nexus/Sonatype username")
-            console.println(nexusPassword)
+                def id
+                if(project.hasProperty('PGP_KEY_ID')) {
+                    id = project.getProperty('PGP_KEY_ID')
+                    console.println("(${project.name}) Using ${id} for PGP Key ID")
+                }
+                else {
+                    id = console.readLine("\n(${project.name}) PGP Key ID: ")
+                }
 
-            repository(url: getReleaseRepositoryUrl()) {
-              authentication(userName: nexusUsername, password: nexusPassword)
-            }
-            snapshotRepository(url: getSnapshotRepositoryUrl()) {
-              authentication(userName: nexusUsername, password: nexusPassword)
-            }
-          }
+                def file
+                if(project.hasProperty('PGP_SECRET_KEY_RING')) {
+                    file = project.getProperty('PGP_SECRET_KEY_RING')
+                    console.println("(${project.name}) Using ${file} for PGP Secrect Key Ring File")
+                }
+                else {
+                    file = console.readLine("\n(${project.name}) PGP Secret Key Ring File (<absolute_path>/secring.gpg): ")
+                }
 
-          pom.project {
-            name POM_NAME
-            packaging POM_PACKAGING
-            description POM_DESCRIPTION
-            url POM_URL
+                def password
+                if(project.hasProperty('PGP_PRIVATE_KEY_PASSWORD')) {
+                    password = project.getProperty('PGP_PRIVATE_KEY_PASSWORD')
+                    console.println("(${project.name}) Using property value for PGP_PRIVATE_KEY_PASSWORD")
+                }
+                else {
+                    password = console.readPassword("\n(${project.name}) PGP Private Key Password: ")
+                }
 
-            scm {
-              url POM_SCM_URL
-              connection POM_SCM_CONNECTION
-              developerConnection POM_SCM_DEV_CONNECTION
-            }
+                def nexusUsernameProperty
+                if(project.hasProperty('NEXUS_USERNAME')) {
+                    nexusUsernameProperty = project.getProperty('NEXUS_USERNAME')
+                    console.println("(${project.name}) Using ${nexusUsernameProperty} for Nexus/Sonatype username")
+                }
+                else {
+                    nexusUsernameProperty = console.readLine("\n(${project.name}) Enter your Sonatype/Nexus username: ")
+                }
 
-            licenses {
-              license {
-                name POM_LICENCE_NAME
-                url POM_LICENCE_URL
-                distribution POM_LICENCE_DIST
-              }
-            }
+                def nexusPasswordProperty
+                if(project.hasProperty('NEXUS_PASSWORD')) {
+                    nexusPasswordProperty = project.getProperty('NEXUS_PASSWORD')
+                    console.println("(${project.name}) Using property value for Nexus/Sonatype password")
+                }
+                else {
+                    nexusPasswordProperty = console.readPassword("\n(${project.name}) Enter your Sonatype/Nexus password: ")
+                }
 
-            developers {
-              developer {
-                id POM_DEVELOPER_ID
-                name POM_DEVELOPER_NAME
-              }
+                project.ext.'signing.keyId' = id
+                project.ext.'signing.secretKeyRingFile' = file
+                project.ext.'signing.password' = password
+                project.ext.nexusUsernameProperty = nexusUsernameProperty
+                project.ext.nexusPasswordProperty = nexusPasswordProperty
+
+                console.printf '\nThanks.\n\n'
             }
-          }
         }
-      }
+
+        uploadArchives {
+            repositories {
+                mavenDeployer {
+                    beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+                    pom.groupId = GROUP
+                    pom.artifactId = POM_ARTIFACT_ID
+                    pom.version = VERSION_NAME
+
+                    repositories {
+                        Console console = System.console()
+                        if(console != null && taskGraph.hasTask(":${project.name}:uploadArchives")) {
+                            ext {
+                                nexusUsername = nexusUsernameProperty
+                                nexusPassword = nexusPasswordProperty
+                            }
+                        }
+                        else {
+                            ext {
+                                nexusUsername = ''
+                                nexusPassword = ''
+                            }
+                        }
+
+                        repository(url: getReleaseRepositoryUrl()) {
+                            authentication(userName: nexusUsername, password: nexusPassword)
+                        }
+                        snapshotRepository(url: getSnapshotRepositoryUrl()) {
+                            authentication(userName: nexusUsername, password: nexusPassword)
+                        }
+                    }
+
+                    pom.project {
+                        name POM_NAME
+                        packaging POM_PACKAGING
+                        description POM_DESCRIPTION
+                        url POM_URL
+
+                        scm {
+                            url POM_SCM_URL
+                            connection POM_SCM_CONNECTION
+                            developerConnection POM_SCM_DEV_CONNECTION
+                        }
+
+                        licenses {
+                            license {
+                                name POM_LICENCE_NAME
+                                url POM_LICENCE_URL
+                                distribution POM_LICENCE_DIST
+                            }
+                        }
+
+                        developers {
+                            developer {
+                                id POM_DEVELOPER_ID
+                                name POM_DEVELOPER_NAME
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
-  }
   
   task sourcesJar(type: Jar, dependsOn: classes) {
     classifier = 'sources'
