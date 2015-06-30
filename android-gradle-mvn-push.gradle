@@ -143,9 +143,6 @@ afterEvaluate { project ->
               }
             }
 
-            console.println("Using ${nexusUsername} for the Nexus/Sonatype username")
-            console.println(nexusPassword)
-
             repository(url: getReleaseRepositoryUrl()) {
               authentication(userName: nexusUsername, password: nexusPassword)
             }
