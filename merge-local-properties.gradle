@@ -10,8 +10,8 @@ allprojects { project ->
 
 def mergeLocalProperties(project) {
   File localPropertiesFiles = project.file("local.properties")
-  System.console().println(localPropertiesFiles.getAbsolutePath())
   if(localPropertiesFiles.exists()) {
+    logger.debug("Merging properties from ${localPropertiesFiles.getAbsolutePath()} for project ${project.name}")
     Properties localProperties = new Properties()
     localProperties.load(new FileInputStream(localPropertiesFiles))
     for(String key : localProperties.propertyNames()) {
