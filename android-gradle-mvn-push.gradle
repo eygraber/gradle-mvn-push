@@ -119,13 +119,13 @@ afterEvaluate { project ->
           def nexusUsernameProperty = ''
           if(project.hasProperty('NEXUS_USERNAME')) {
             nexusUsernameProperty = project.getProperty('NEXUS_USERNAME')
-            System.console().println("Using ${nexusUsernameProperty} for Nexus/Sonatype username")
+            if(System.console() != null) System.console().println("Using ${nexusUsernameProperty} for Nexus/Sonatype username")
           }
 
           def nexusPasswordProperty = ''
           if(project.hasProperty('NEXUS_PASSWORD')) {
             nexusPasswordProperty = project.getProperty('NEXUS_PASSWORD')
-            System.console().println("Using property value for Nexus/Sonatype password")
+            if(System.console() != null) System.console().println("Using property value for Nexus/Sonatype password")
           }
 
           repositories {
